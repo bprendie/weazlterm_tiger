@@ -1,0 +1,3 @@
+#!/bin/sh
+echo 'Weazlterm 0.1.0 does not include scp.' >&2
+exit 126
