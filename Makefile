@@ -1,9 +1,9 @@
 CC ?= cc
 CFLAGS ?= -O2 -g
 WARN = -Wall -Wextra -Wpedantic
-CORE = src/screen.c src/parser.c src/csi.c src/color.c
+CORE = src/screen.c src/parser.c src/csi.c src/color.c src/text.c src/clipboard.c
 SESSION = src/session.c src/session_io.c
-COCOA = src/main.m src/WeazlApp.m src/WeazlWindow.m src/WeazlView.m src/WeazlDrawing.m src/WeazlInput.m
+COCOA = src/main.m src/WeazlApp.m src/WeazlWindow.m src/WeazlView.m src/WeazlDrawing.m src/WeazlInput.m src/WeazlSelection.m src/WeazlClipboard.m
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
 PTY_LIB =
@@ -21,19 +21,27 @@ all: test
 build:
 	mkdir -p build
 
-build/test-terminal: $(CORE) src/terminal.h tests/test_terminal.c | build
+build/test-terminal: $(CORE) src/terminal.h src/clipboard.h tests/test_terminal.c | build
 	$(CC) $(CFLAGS) $(WARN) -std=c99 -Isrc $(CORE) tests/test_terminal.c -o $@
 
-build/test-session: $(SESSION) src/session.h tests/test_session.c | build
+build/test-session: $(SESSION) src/session.h src/clipboard.h tests/test_session.c | build
 	$(CC) $(CFLAGS) $(WARN) -std=c99 -Isrc $(SESSION) tests/test_session.c $(THREAD_LIB) $(PTY_LIB) -o $@
 
-build/test-sessions: $(SESSION) src/session.h tests/test_sessions.c | build
+build/test-sessions: $(SESSION) src/session.h src/clipboard.h tests/test_sessions.c | build
 	$(CC) $(CFLAGS) $(WARN) -std=c99 -Isrc $(SESSION) tests/test_sessions.c $(THREAD_LIB) $(PTY_LIB) -o $@
 
-test: build/test-terminal build/test-session build/test-sessions
+build/test-clipboard: $(CORE) src/terminal.h src/clipboard.h tests/test_clipboard.c | build
+	$(CC) $(CFLAGS) $(WARN) -std=c99 -Isrc $(CORE) tests/test_clipboard.c -o $@
+
+build/test-paste-session: $(SESSION) src/session.h src/clipboard.h tests/test_paste_session.c | build
+	$(CC) $(CFLAGS) $(WARN) -std=c99 -Isrc $(SESSION) tests/test_paste_session.c $(THREAD_LIB) $(PTY_LIB) -o $@
+
+test: build/test-terminal build/test-session build/test-sessions build/test-clipboard build/test-paste-session
 	./build/test-terminal
 	./build/test-session
 	./build/test-sessions
+	./build/test-clipboard
+	./build/test-paste-session
 	sh tests/test_shell_resolution.sh
 
 sanitize: | build
@@ -43,6 +51,10 @@ sanitize: | build
 	./build/test-session-sanitize
 	$(CC) -O1 -g $(WARN) -std=c99 -Isrc -fsanitize=address,undefined -fno-omit-frame-pointer $(SESSION) tests/test_sessions.c $(THREAD_LIB) $(PTY_LIB) -o build/test-sessions-sanitize
 	./build/test-sessions-sanitize
+	$(CC) -O1 -g $(WARN) -std=c99 -Isrc -fsanitize=address,undefined -fno-omit-frame-pointer $(CORE) tests/test_clipboard.c -o build/test-clipboard-sanitize
+	./build/test-clipboard-sanitize
+	$(CC) -O1 -g $(WARN) -std=c99 -Isrc -fsanitize=address,undefined -fno-omit-frame-pointer $(SESSION) tests/test_paste_session.c $(THREAD_LIB) $(PTY_LIB) -o build/test-paste-session-sanitize
+	./build/test-paste-session-sanitize
 
 ssh:
 	sh scripts/build-ssh.sh
@@ -70,4 +82,4 @@ app: | build
 	@echo 'Development app built. SSH packaging is a separate, verified step.'
 
 clean:
-	rm -f build/test-terminal build/test-session build/test-sessions build/test-terminal-sanitize build/test-session-sanitize build/test-sessions-sanitize
+	rm -f build/test-terminal build/test-session build/test-sessions build/test-clipboard build/test-paste-session build/test-terminal-sanitize build/test-session-sanitize build/test-sessions-sanitize build/test-clipboard-sanitize build/test-paste-session-sanitize

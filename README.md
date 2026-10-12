@@ -10,16 +10,17 @@ Tiger's old SSH hits a `no hostkey alg` wall when trying to shake hands with a m
 
 **v0.1.1 is proven on the metal:** We have a verified interactive SSH connection from a 1.5 GHz PowerPC G4 with 1.25 GB RAM running Tiger, complete with working terminal colors. The first silent connection turned out to be a DNS issue; the machine itself had more to give.
 
-**Current build: v0.2.0** adds SFTP, independent terminal windows, and native
-Tiger tabs. These additions pass host checks and PPC cross-build checks;
-they still need their G4 runtime test.
+**Current build: v0.3.0** adds text selection, clipboard copy, 2,000 lines of
+shell scrollback, and pastes up to 1 MiB. SFTP, terminal windows, and Tiger
+tabs remain included. Host tests and PPC cross-build checks pass; the new
+clipboard and window controls still need their G4 runtime test.
 
 ## Get on the Wire
 
 The Tiger binary is pre-compiled and lives in this repository. You do not need to burn cycles building it on your vintage Mac.
 
-- [Download Weazlterm 0.2.0 for Tiger / PowerPC](release/weazlterm-0.2.0-tiger-ppc.zip)
-- [SHA-256 checksum](release/weazlterm-0.2.0-tiger-ppc.zip.sha256)
+- [Download Weazlterm 0.3.0 for Tiger / PowerPC](release/weazlterm-0.3.0-tiger-ppc.zip)
+- [SHA-256 checksum](release/weazlterm-0.3.0-tiger-ppc.zip.sha256)
 - [Unpacked app bundle](release/weazlterm.app)
 
 1. Quit an older Weazlterm if it is running. Extract the ZIP and copy the complete `weazlterm.app` to your Mac or a USB drive, replacing the previous app.
@@ -51,13 +52,47 @@ SSH still respects your user configuration, keys, and known-hosts files. The ser
 | Command-W | Close the active tab; close the window if it was the last tab |
 | Command-Shift-W | Close the active window and all its sessions |
 | Command-Shift-[ / ] | Previous / next tab |
-| Command-V | Paste |
+| Command-C | Copy selected text |
+| Command-A | Select all retained text in this tab |
+| Command-V | Paste up to 1 MiB |
+| Shift-Page Up / Down | Browse shell scrollback |
 | Command-Q | Quit all sessions |
 
 Each tab owns an independent shell and PTY. Closing a tab ends its session;
 other tabs keep running. Close the final window and Command-N still opens a
 fresh terminal. New terminals start a local shell, including when the first
 session was launched using `--ssh`.
+
+## Copy the Signal
+
+Drag across the text you want, then **Command-C**. Double-click selects a
+word; triple-click selects a row. Shift-click extends the selection. The
+right-click menu (Control-click on a one-button mouse) has Copy, Paste, and
+Select All too. **Control-C still interrupts the shell.**
+
+Mouse-wheel scrolling and Shift-Page Up / Down reach the last **2,000 saved
+shell rows**. Command-A includes retained history, so a long LLM answer can
+leave the window and still reach your clipboard. Automatically wrapped lines
+join back together when copied; actual newlines and indentation stay intact.
+Copy writes plain Unicode text, without terminal color escapes.
+
+**Command-V** accepts up to **1 MiB of UTF-8 text**. The paste is queued as a
+whole and streamed to the PTY; it is never silently clipped to fit the old
+64 KiB input buffer. Further typing is refused while that queue drains.
+Control-C cancels the unsent portion and sends an interrupt after completing
+any paste bracket. Bytes already delivered cannot be recalled.
+
+Applications that enable bracketed paste receive its opening and closing
+markers. With other applications, multiline paste asks first because newlines
+can immediately run shell commands. Line endings are normalized; tabs and
+UTF-8 survive. Escape and other C0 controls (apart from tabs/newlines), plus
+DEL, are removed from pasted text.
+
+History is bounded and belongs to each tab. Full-screen alternate-screen
+applications manage their own scrolling; Select All there copies that screen.
+Saved rows keep their original text after resizing, but the live screen does
+not yet reflow and a narrower window clips wider historical rows on display.
+Selecting a complete historical row still copies its full saved width.
 
 ## SFTP (Move the Payload)
 
@@ -91,11 +126,11 @@ Version 0.1.1 also patches a startup-path bug from the first build. Tiger's Bash
 
 This is an early terminal build with a working hardware-tested SSH path. The remaining work is visible:
 
-* Scrollback and text selection/copy are currently unimplemented.
+* Clipboard interaction and scrollback need their real-G4 acceptance test.
 * `scp` is not packaged; its command intentionally refuses to run.
 * Unicode decoding exists, but wide and combining character layouts are incomplete.
 * Full-screen programs such as `vim`, `less`, `top`, and `tmux` require broader hardware testing. `TERM=xterm-256color` is currently advertised.
-* SFTP transfers, new windows/tabs, paste, resize, job control, shutdown, and USB relocation still need remaining G4 acceptance tests. CPU, memory, and battery budgets are pending measurement.
+* SFTP transfers, new windows/tabs, resize, job control, shutdown, and USB relocation still need remaining G4 acceptance tests. CPU, memory, and battery budgets are pending measurement.
 
 The successful session is user-reported hardware evidence. A captured negotiation log and the complete interoperability test matrix remain work to do. See [docs/STATUS.md](docs/STATUS.md) for the exact boundaries.
 

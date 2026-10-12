@@ -30,19 +30,21 @@ static void appendScalar(NSMutableString *text, uint32_t scalar)
             terminal.cols * cellWidth, cellHeight);
         if (!NSIntersectsRect(rowRect, dirty)) continue;
         for (x = 0; x < terminal.cols;) {
-            const WTCell *cell = wt_cell(&terminal, x, y);
+            const WTCell *cell = [self visibleCellAtColumn:x row:y];
             int start = x;
+            BOOL selected = [self isSelectedColumn:x row:y];
             uint32_t fg = cell->fg, bg = cell->bg;
             NSMutableString *text = [NSMutableString string];
             NSMutableDictionary *attributes = [NSMutableDictionary dictionary];
             NSRect run;
             if (cell->flags & WT_INVERSE) { fg = cell->bg; bg = cell->fg; }
+            if (selected) { fg = 0xffffff; bg = 0x335f87; }
             do {
-                appendScalar(text, wt_cell(&terminal, x, y)->codepoint);
+                appendScalar(text, [self visibleCellAtColumn:x row:y]->codepoint);
                 ++x;
-            } while (x < terminal.cols && wt_cell(&terminal, x, y)->fg == cell->fg &&
-                wt_cell(&terminal, x, y)->bg == cell->bg &&
-                wt_cell(&terminal, x, y)->flags == cell->flags);
+            } while (x < terminal.cols && [self isSelectedColumn:x row:y] == selected && [self visibleCellAtColumn:x row:y]->fg == cell->fg &&
+                [self visibleCellAtColumn:x row:y]->bg == cell->bg &&
+                [self visibleCellAtColumn:x row:y]->flags == cell->flags);
             run = NSMakeRect(8 + start * cellWidth, 8 + y * cellHeight,
                 (x - start) * cellWidth, cellHeight);
             [rgb(bg) set];
@@ -59,7 +61,7 @@ static void appendScalar(NSMutableString *text, uint32_t scalar)
             [NSGraphicsContext restoreGraphicsState];
         }
     }
-    if (terminal.cursor_visible && !sessionFinished) {
+    if (terminal.cursor_visible && !sessionFinished && !scrollOffset) {
         [rgb(0xf0c674) set];
         NSFrameRect(NSMakeRect(8 + terminal.x * cellWidth,
             8 + terminal.y * cellHeight, cellWidth, cellHeight));

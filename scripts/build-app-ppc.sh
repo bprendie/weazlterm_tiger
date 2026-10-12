@@ -31,7 +31,7 @@ mkdir -p "$objects" "$stage/Contents/MacOS" \
     "$stage/Contents/Resources/shell" "$stage/Contents/Resources/licenses" \
     "$stage/Contents/Helpers"
 
-for name in screen parser csi color session session_io; do
+for name in screen parser csi color text clipboard session session_io; do
     "$cc" -O2 -mcpu=G3 -Isrc -c "$root/src/$name.c" \
         -o "$objects/$name.o"
 done
@@ -52,7 +52,7 @@ compile_objc() {
     "$as" -arch ppc -force_cpusubtype_ALL -o "$objects/$name.o" "$final"
 }
 
-for source in main.m WeazlApp.m WeazlWindow.m WeazlView.m WeazlDrawing.m WeazlInput.m; do
+for source in main.m WeazlApp.m WeazlWindow.m WeazlView.m WeazlDrawing.m WeazlInput.m WeazlSelection.m WeazlClipboard.m; do
     compile_objc "$source"
 done
 

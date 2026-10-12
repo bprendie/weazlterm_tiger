@@ -63,7 +63,21 @@ static void deliver(void *context, const void *bytes, size_t length)
 }
 - (void)receiveOutput:(NSData *)data
 {
+    uint64_t previousTotal = terminal.history_total;
+    int previousAlternate = terminal.alternate;
     wt_feed(&terminal, [data bytes], [data length]);
+    if (terminal.alternate != previousAlternate || terminal.history_total < previousTotal) {
+        scrollOffset = 0;
+        [self clearSelection];
+    } else if (!terminal.alternate) {
+        uint64_t oldest = (terminal.history_total - terminal.history_count) * terminal.cols;
+        if (scrollOffset) {
+            uint64_t offset = scrollOffset + terminal.history_total - previousTotal;
+            scrollOffset = offset > (uint64_t)terminal.history_count ? terminal.history_count : (int)offset;
+        }
+        if ([self hasSelection] && (selectionAnchor < oldest || selectionEnd < oldest))
+            [self clearSelection];
+    }
     if (terminal.dirty) [self setNeedsDisplay:YES];
 }
 - (void)sessionEnded:(id)unused
@@ -90,6 +104,8 @@ static void deliver(void *context, const void *bytes, size_t length)
 }
 - (void)sendData:(NSData *)data
 {
+    [self clearSelection];
+    [self scrollToLive];
     if (!sessionStarted || sessionFinished ||
         wt_session_send(&session, [data bytes], [data length])) NSBeep();
 }
@@ -105,6 +121,8 @@ static void deliver(void *context, const void *bytes, size_t length)
     if (cols > WT_MAX_COLS) cols = WT_MAX_COLS;
     if (rows > WT_MAX_ROWS) rows = WT_MAX_ROWS;
     if (cols == terminal.cols && rows == terminal.rows) return;
+    [self clearSelection];
+    scrollOffset = 0;
     if (wt_resize(&terminal, cols, rows)) { NSBeep(); return; }
     if (sessionStarted && !sessionFinished && wt_session_resize(&session, cols, rows)) NSBeep();
     [self setNeedsDisplay:YES];

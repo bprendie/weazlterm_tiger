@@ -10,6 +10,9 @@
     float cellWidth, cellHeight;
     NSString *sessionTitle;
     BOOL sessionStarted, sessionFinished;
+    int scrollOffset;
+    uint64_t selectionAnchor, selectionEnd;
+    BOOL selecting;
 }
 - (BOOL)startProgram:(NSString *)path arguments:(NSArray *)arguments;
 - (void)receiveOutput:(NSData *)data;
@@ -20,6 +23,17 @@
 - (void)sendData:(NSData *)data;
 @end
 
-@interface WeazlView (Input)
+@interface WeazlView (Clipboard)
 - (void)paste:(id)sender;
+@end
+
+@interface WeazlView (Selection)
+- (void)copy:(id)sender;
+- (void)selectAll:(id)sender;
+- (void)clearSelection;
+- (BOOL)hasSelection;
+- (BOOL)isSelectedColumn:(int)x row:(int)y;
+- (const WTCell *)visibleCellAtColumn:(int)x row:(int)y;
+- (void)scrollByLines:(int)lines;
+- (void)scrollToLive;
 @end

@@ -536,3 +536,27 @@ Implementation/review evidence is in docs/STATUS.md. Hardware gate:
 
 The 0.1.1 authenticated SSH/color report remains valid evidence for that build.
 It is not a runtime pass for 0.2.0 window controls or SFTP.
+
+
+## 17 Version 0.3.0 clipboard scope (2026-10-12)
+
+The user requested full copy/paste for interacting with LLMs. Implemented
+selection, Command-C/Command-A, a contextual clipboard menu, bounded primary
+screen history, and atomic admission/streaming of clipboard pastes up to 1 MiB.
+Host evidence and remaining target checks are recorded in docs/STATUS.md.
+
+- [ ] Drag-select forward/backward, double-click words, triple-click rows,
+  Shift-click to extend; verify highlight and copied text in another Tiger app.
+- [ ] Copy UTF-8, multiline code with indentation, and soft-wrapped long text.
+- [ ] Scroll 2,000+ lines, select across screens, and use Command-A in each tab.
+- [ ] Verify an alternate-screen application exposes only its current screen;
+  switch back and ensure shell history is preserved.
+- [ ] Paste a long LLM prompt into a bracketed-paste-aware remote application;
+  verify full text, literal indentation, and no premature execution.
+- [ ] Confirm or cancel multiline paste in Tiger Bash; test a paste above 1 MiB.
+- [ ] Control-C during a large paste must cancel queued text and finish any
+  bracket before interrupting; Control-C outside paste must still interrupt.
+- [ ] Resize, switch tabs, close during paste, and verify other sessions work.
+
+History keeps 2,000 physical rows and their original widths. It is not a full
+terminal reflow engine; live-screen wide/combining cell layout is still pending.

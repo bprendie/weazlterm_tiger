@@ -1,9 +1,9 @@
 # Weazlterm status and review evidence
 
-Updated 2026-10-12. **Version 0.2.0 is built at `../release/weazlterm.app`
-with bundled SFTP, independent terminal windows, and native Tiger tabs. Host
-regressions, SFTP local-pipe transfers, and PPC cross-build checks pass. The
-new controls and SFTP await G4 runtime testing.**
+Updated 2026-10-12. **Version 0.3.0 is built at `../release/weazlterm.app`
+with selection/copy, 2,000 saved shell rows, and clipboard pastes up to 1 MiB.
+Host regressions and sanitizers pass, including an actual PTY paste and
+cancellation test. The new clipboard interaction awaits G4 runtime testing.**
 
 The user confirmed a successful G4 interactive SSH session and colors with
 0.1.1; the original hostname problem was identified as DNS. That earlier
@@ -26,9 +26,9 @@ only Tiger `libSystem`. These checks establish cross-build structure and
 dependencies, not successful loading by Tiger's dynamic loader.
 
 The final bundle tree SHA-256 is
-`45ca9e7f82287fba88a4ba34defeedab8bccc48bdfc431ad28f7bf0a5a9664c3`.
+`db9674d7fa8841f520b14de0483a288be73f1bf00a847dd98f0a46e1a74ab53c`.
 The executable string scan found no build-machine paths. A deterministic
-file-by-file record is in `build/release-validation-0.2.0.log`.
+file-by-file record is in `build/release-validation-0.3.0.log`.
 
 | Check | Result and retained evidence |
 | --- | --- |
@@ -54,8 +54,8 @@ running the bundled PPC client.
 
 The G4, Tiger runtime, and USB launch path were unavailable in this build
 environment. The PPC executables have not run here. The terminal is an early
-xterm-compatible subset: it has no scrollback or text selection/copy, and
-full-screen TUI compatibility has not been established. `scp` is not
+xterm-compatible subset. Version 0.3.0 adds bounded primary-screen history
+and text selection/copy; full-screen TUI compatibility has not been established. `scp` is not
 supported and intentionally fails closed. SFTP is implemented in 0.2.0 and
 awaits a target-network transfer test. Paste and resize are present in
 the source but still need hardware interaction tests.
@@ -191,3 +191,60 @@ The 0.1.1 ZIP remains available. The new unpacked bundle replaces the current
 Next: run the G4 checks in workbook section 16. In particular verify tab
 focus, independent output/resize, background session exit, close/quit cleanup,
 and SFTP put/get with a verified server. No 0.2.0 G4 pass is claimed yet.
+
+
+## 0.3.0 clipboard and scrollback (2026-10-12)
+
+Requested: full copy/paste for LLM interaction. Implemented and cross-built;
+physical G4 clipboard behavior remains unverified.
+
+- `WeazlSelection.m` implements drag/Shift-click selection, double-click word
+  and triple-click physical-row selection, highlighted ranges, Command-C,
+  Command-A, and right-click/Control-click clipboard menus. Command-A covers
+  retained primary history plus screen, or just the alternate screen.
+- `WeazlDrawing.m` renders the selected/scrolled rows; `WeazlView.m` keeps a
+  scrolled viewport anchored as output arrives and clears expired selection
+  when the history ring drops selected rows. Mouse-wheel or Shift-Page Up/Down
+  browses saved rows; ordinary input returns to live output.
+- `screen.c`, `text.c`, and `terminal.h` keep a 2,000-row ring with lazy cell
+  allocation, original row widths, and soft-wrap flags. Copy emits plain UTF-8,
+  joins automatic wraps, trims right-side row padding, and preserves logical
+  newlines/indentation. Resizing does not discard saved row tails; the current
+  live screen still uses the existing crop/pad behavior, not reflow.
+- `clipboard.c` normalizes CR/LF and CRLF to terminal returns, preserves UTF-8
+  and tabs, removes other C0 controls/DEL (including embedded ESC), and adds
+  complete bracket markers when the application has enabled mode 2004.
+- `WeazlClipboard.m` uses Tiger NSPasteboard/NSStringPboardType and menu
+  validation. Multiline paste outside bracketed mode requires confirmation.
+  UTF-8 input over 1 MiB is rejected before queuing, without truncation.
+- `session.c` and `session_io.c` atomically admit one whole paste and stream
+  it under normal PTY write readiness. Existing input precedes the paste;
+  additional typing/pastes cannot interleave. Control-C cancels unsent bytes,
+  completes any partially sent bracket, and sends the interrupt. Delivered
+  bytes cannot be recalled. Close/EOF frees the pending allocation.
+- All original source modules remain below 300 lines. No clipboard polling,
+  recurring scroll timer, external clipboard dependency, or SSH changes.
+
+Validation on x86-64 Linux:
+
+| Check | Result and evidence |
+| --- | --- |
+| `make test sanitize` | Passed all terminal, session, multi-session, shell, clipboard, and paste suites; `build/tests-0.3.0.log` |
+| Clipboard text fixtures | UTF-8/non-BMP copy, indentation, wrapped joins, alternate-screen separation, history rollover, resizing with retained row tails, invalid ranges, paste normalization/control filtering, and 1 MiB bounds |
+| Real PTY paste fixture | Full 1 MiB with forced read backpressure; byte-for-byte payload/marker verification, preceding input order, rejection of interleaving, and Control-C cancellation with a complete closing marker |
+| `sh scripts/build-app-ppc.sh` | Passed against Tiger SDK, with no compiler warnings; `build/app-ppc-0.3.0.log` |
+| Artifact/ZIP checks | Four native PPC executables, correct modes, matching resources, no build-machine paths, byte/mode ZIP roundtrip, and README links; `build/release-validation-0.3.0.log` |
+
+Current ZIP: `release/weazlterm-0.3.0-tiger-ppc.zip`.
+ZIP SHA-256: `c70ae74c3c5e2ccfd273edf06b3f1dd90c1ad4188424347562ce55765592522d`.
+Prior version ZIPs remain available; the previous unpacked bundle is preserved
+under ignored `build/weazlterm-0.2.0-before-clipboard.app`.
+
+Remaining limits: no live-screen reflow, incomplete wide/combining character
+cell layout, and at most 2,000 historical physical rows per tab. The history
+cell storage is bounded by 2,000 × 512 × sizeof(WTCell), plus metadata; rows
+allocate as needed. Narrow viewports clip older wider rows visually; whole-row
+copy retains their full saved text. Full-screen applications own their own
+scrollback behavior. Host tests do not establish native clipboard/menu/mouse
+behavior or a receiving remote LLM application's paste handling. Run workbook
+section 17 on the G4 before declaring those verified.

@@ -85,6 +85,8 @@
     [self addItem:@"Close Window" action:@selector(closeWindow:) key:@"w" modifiers:shifted menu:file];
     item = [bar addItemWithTitle:@"Edit" action:NULL keyEquivalent:@""];
     [bar setSubmenu:edit forItem:item];
+    [edit addItemWithTitle:@"Copy" action:@selector(copy:) keyEquivalent:@"c"];
+    [edit addItemWithTitle:@"Select All" action:@selector(selectAll:) keyEquivalent:@"a"];
     [edit addItemWithTitle:@"Paste" action:@selector(paste:) keyEquivalent:@"v"];
     item = [bar addItemWithTitle:@"Window" action:NULL keyEquivalent:@""];
     [bar setSubmenu:navigation forItem:item];

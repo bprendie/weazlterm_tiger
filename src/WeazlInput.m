@@ -8,8 +8,14 @@
     unichar key;
     const char *sequence = NULL;
     unsigned modifiers = [event modifierFlags];
+    if (modifiers & NSCommandKeyMask) { [super keyDown:event]; return; }
     if (![characters length]) return;
     key = [characters characterAtIndex:0];
+    if ((modifiers & NSShiftKeyMask) &&
+        (key == NSPageUpFunctionKey || key == NSPageDownFunctionKey)) {
+        [self scrollByLines:key == NSPageUpFunctionKey ? terminal.rows - 1 : 1 - terminal.rows];
+        return;
+    }
     switch (key) {
     case NSUpArrowFunctionKey: sequence = terminal.application_cursor ? "\033OA" : "\033[A"; break;
     case NSDownArrowFunctionKey: sequence = terminal.application_cursor ? "\033OB" : "\033[B"; break;
@@ -44,27 +50,5 @@
         text = [@"\033" stringByAppendingString:[event charactersIgnoringModifiers]];
     }
     [self sendData:[text dataUsingEncoding:NSUTF8StringEncoding]];
-}
-- (void)paste:(id)sender
-{
-    NSString *source = [[NSPasteboard generalPasteboard] stringForType:NSStringPboardType];
-    NSMutableString *text;
-    NSMutableData *data;
-    (void)sender;
-    if (!source) return;
-    text = [[source mutableCopy] autorelease];
-    [text replaceOccurrencesOfString:@"\r\n" withString:@"\n" options:0 range:NSMakeRange(0, [text length])];
-    [text replaceOccurrencesOfString:@"\n" withString:@"\r" options:0 range:NSMakeRange(0, [text length])];
-    /* Escape can terminate bracketed paste; discard it from pasted text. */
-    [text replaceOccurrencesOfString:@"\033" withString:@"" options:0 range:NSMakeRange(0, [text length])];
-    data = [NSMutableData data];
-    if (terminal.bracketed_paste) [data appendBytes:"\033[200~" length:6];
-    [data appendData:[text dataUsingEncoding:NSUTF8StringEncoding]];
-    if (terminal.bracketed_paste) [data appendBytes:"\033[201~" length:6];
-    if ([data length] > WT_INPUT_CAPACITY) {
-        NSRunAlertPanel(@"Paste is too large", @"Paste up to 64 KiB at a time.", @"OK", nil, nil);
-        return;
-    }
-    [self sendData:data];
 }
 @end
