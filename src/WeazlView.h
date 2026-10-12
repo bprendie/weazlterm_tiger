@@ -8,6 +8,7 @@
     NSFont *font;
     NSFont *boldFont;
     float cellWidth, cellHeight;
+    NSString *sessionTitle;
     BOOL sessionStarted, sessionFinished;
 }
 - (BOOL)startProgram:(NSString *)path arguments:(NSArray *)arguments;
@@ -15,6 +16,7 @@
 - (void)sessionEnded:(id)unused;
 - (void)readSession:(id)unused;
 - (void)stopSession;
+- (NSString *)sessionTitle;
 - (void)sendData:(NSData *)data;
 @end
 

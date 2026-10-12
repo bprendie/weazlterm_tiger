@@ -1,15 +1,31 @@
-Weazlterm 0.1.0
+Weazlterm 0.2.0
 
-Weazlterm is a PowerPC terminal preview for Mac OS X 10.4.11. Open the app
-and enter an SSH command at the prompt. The bundled OpenSSH client is used for
-ssh and ssh-keygen; the older system SSH is not used as a fallback.
-The helper is OpenSSH portable 10.6p1; its license is in licenses/.
-To deliberately use Tiger's client instead, invoke /usr/bin/ssh explicitly.
+Native PowerPC terminal for Mac OS X 10.4.11, with OpenSSH portable 10.6p1.
+This build adds SFTP, multiple terminal windows, and native Tiger tabs.
 
-On the first connection, compare the server host-key fingerprint with a
-trusted source before accepting it. Host-key checking remains enabled.
+Command-N: new terminal window
+Command-T: new tab in the active window
+Command-W: close the active tab (or its window when it is the last tab)
+Command-Shift-W: close the active window and its sessions
+Command-Shift-[ / ]: previous / next tab
+Command-V: paste from the clipboard
+Command-Q: quit all windows and sessions
 
-The first build is focused on interactive SSH shells. scp and sftp are not
-included. Terminal support is an early xterm-compatible subset; it does not
-yet provide scrollback or text selection/copy. Paste is available from the
-Edit menu.
+Each tab has its own local shell and PTY. Closing a tab ends that session.
+After closing the last window, Command-N opens another terminal.
+
+ssh user@server
+sftp user@server
+
+At the sftp prompt use ls, cd, lcd, put, get, and bye. SFTP uses the bundled
+SSH transport. ssh, ssh-keygen, and sftp resolve to app helpers; a missing
+helper refuses to fall back to the old system client. Deliberate /usr/bin/ssh
+or SFTP -S overrides can select another client.
+
+Compare a new server's host-key fingerprint with a trusted source before
+accepting it. Host-key checking remains enabled. OpenSSH notices: licenses/.
+
+SFTP and new window/tab controls await G4 runtime testing. The 0.1.1 SSH
+session and terminal colors were confirmed by the user on the G4.
+scp is not included. Scrollback and selection/copy are not implemented.
+Wide/combining characters and full-screen TUIs need further work/testing.

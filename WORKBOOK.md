@@ -512,3 +512,27 @@ upstream SSH modifications attributable and separate from terminal code.
 - [Apple attributed string drawing](https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/AttributedStrings/Tasks/DrawingAttrStrings.html):
   initial AppKit drawing reference; validate target API availability against
   the real Tiger SDK and measure hot-path cost.
+
+
+## 16 Version 0.2.0 scope extension (2026-10-12)
+
+The user requested bundled SFTP, Command-N for new terminal windows, and
+Command-T for tabs. This authorizes bringing these features forward from
+later work. Every tab owns a separate WeazlView and WTSession; the app uses
+Tiger NSTabView and keeps Command-N available after the last window closes.
+
+Implementation/review evidence is in docs/STATUS.md. Hardware gate:
+
+- [ ] Open two windows and several tabs via keyboard and Shell menu.
+- [ ] Verify input/paste goes only to the selected tab and switching restores focus.
+- [ ] Run separate commands in each tab; resize, switch during output, then close
+  one tab/window. Other sessions must remain alive with their content intact.
+- [ ] Run `exit` in a background tab; its ended label must not rename the active session.
+- [ ] Close the last window, reopen using Command-N, then quit with Command-Q;
+  check for leftover shell/SSH/SFTP processes.
+- [ ] `sftp user@server`: verify host identity, authenticate, put/get a test file
+  (including spaces and binary content), compare checksums, and exit with `bye`.
+- [ ] Repeat SFTP after USB relocation with spaces; confirm the bundled SSH is used.
+
+The 0.1.1 authenticated SSH/color report remains valid evidence for that build.
+It is not a runtime pass for 0.2.0 window controls or SFTP.

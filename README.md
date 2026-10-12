@@ -10,17 +10,21 @@ Tiger's old SSH hits a `no hostkey alg` wall when trying to shake hands with a m
 
 **v0.1.1 is proven on the metal:** We have a verified interactive SSH connection from a 1.5 GHz PowerPC G4 with 1.25 GB RAM running Tiger, complete with working terminal colors. The first silent connection turned out to be a DNS issue; the machine itself had more to give.
 
+**Current build: v0.2.0** adds SFTP, independent terminal windows, and native
+Tiger tabs. These additions pass host checks and PPC cross-build checks;
+they still need their G4 runtime test.
+
 ## Get on the Wire
 
 The Tiger binary is pre-compiled and lives in this repository. You do not need to burn cycles building it on your vintage Mac.
 
-- [Download Weazlterm 0.1.1 for Tiger / PowerPC](release/weazlterm-0.1.1-tiger-ppc.zip)
-- [SHA-256 checksum](release/weazlterm-0.1.1-tiger-ppc.zip.sha256)
+- [Download Weazlterm 0.2.0 for Tiger / PowerPC](release/weazlterm-0.2.0-tiger-ppc.zip)
+- [SHA-256 checksum](release/weazlterm-0.2.0-tiger-ppc.zip.sha256)
 - [Unpacked app bundle](release/weazlterm.app)
 
-1. Extract the ZIP and copy the complete `weazlterm.app` to your Mac or a USB drive.
+1. Quit an older Weazlterm if it is running. Extract the ZIP and copy the complete `weazlterm.app` to your Mac or a USB drive, replacing the previous app.
 2. Open the app in Tiger.
-3. Connect from the prompt: `ssh yourname@your-server`.
+3. Connect from the prompt: `ssh yourname@your-server`, or `sftp yourname@your-server` for file transfers.
 
 Verify the payload by running `ssh -V`; this build should report `OpenSSH_10.6p1`. For a new host, compare its fingerprint with a trusted server-side source before accepting the key.
 
@@ -28,15 +32,48 @@ The bundle packs the terminal, SSH helpers, the icon, startup resources, and Ope
 
 ## The Deck
 
-One window. A local shell. Your remote machine on the other end.
+A shell per tab. A window per job. Your remote machine on the other end.
 
 * **Native PPC:** 32-bit PowerPC Mach-O executables linked against Tiger's system libraries and frameworks.
-* **Bundled SSH:** Ordinary `ssh` and `ssh-keygen` commands inside Weazlterm resolve directly to the app's internal helpers. A missing helper fails closed.
+* **Bundled SSH:** Ordinary `ssh`, `ssh-keygen`, and `sftp` commands inside Weazlterm resolve directly to the app's internal helpers. A missing helper fails closed.
 * **Terminal Color:** ANSI, 256-color, and true-color handling is in the core; color output was confirmed working in the reported G4 session.
 * **Keyboard First:** Cursor/navigation keys, control keys, and Edit-menu pasting are active. Window resizing properly updates the PTY size.
 * **Local Setup:** The app reads your shell startup files and establishes its SSH command routing afterward. It strictly leaves your dotfiles and Tiger's `/usr/bin/ssh` untouched.
 
 SSH still respects your user configuration, keys, and known-hosts files. The server keeps its security settings. If you deliberately invoke `/usr/bin/ssh`, it will still run Tiger's ancient system client.
+
+## More Lines, More Sessions
+
+| Shortcut | Action |
+| --- | --- |
+| Command-N | New terminal window |
+| Command-T | New tab in the active window |
+| Command-W | Close the active tab; close the window if it was the last tab |
+| Command-Shift-W | Close the active window and all its sessions |
+| Command-Shift-[ / ] | Previous / next tab |
+| Command-V | Paste |
+| Command-Q | Quit all sessions |
+
+Each tab owns an independent shell and PTY. Closing a tab ends its session;
+other tabs keep running. Close the final window and Command-N still opens a
+fresh terminal. New terminals start a local shell, including when the first
+session was launched using `--ssh`.
+
+## SFTP (Move the Payload)
+
+```sh
+sftp yourname@your-server
+```
+
+Use `ls` and `cd` remotely, `lcd` for your local folder, `put file` to upload,
+`get file` to download, and `bye` to leave. Quote paths containing spaces.
+The app bundles OpenSSH's native SFTP client and selects its adjacent SSH
+helper as the transport, including when the app is moved or renamed.
+An explicit SFTP `-S` option can deliberately override that transport.
+
+Host checks transferred a 1 MiB binary payload through the SFTP protocol and
+verified byte-for-byte upload/download equality. That local-pipe fixture
+checks transfers and launcher routing; the PPC network transfer test is next.
 
 ## Sysop Notes
 
@@ -55,10 +92,10 @@ Version 0.1.1 also patches a startup-path bug from the first build. Tiger's Bash
 This is an early terminal build with a working hardware-tested SSH path. The remaining work is visible:
 
 * Scrollback and text selection/copy are currently unimplemented.
-* `scp` and `sftp` are not packaged; their commands intentionally refuse to run.
+* `scp` is not packaged; its command intentionally refuses to run.
 * Unicode decoding exists, but wide and combining character layouts are incomplete.
 * Full-screen programs such as `vim`, `less`, `top`, and `tmux` require broader hardware testing. `TERM=xterm-256color` is currently advertised.
-* Paste, resize, job control, shutdown, and USB relocation still need remaining G4 acceptance tests. CPU, memory, and battery budgets are pending measurement.
+* SFTP transfers, new windows/tabs, paste, resize, job control, shutdown, and USB relocation still need remaining G4 acceptance tests. CPU, memory, and battery budgets are pending measurement.
 
 The successful session is user-reported hardware evidence. A captured negotiation log and the complete interoperability test matrix remain work to do. See [docs/STATUS.md](docs/STATUS.md) for the exact boundaries.
 

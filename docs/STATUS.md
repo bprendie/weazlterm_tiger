@@ -1,17 +1,21 @@
 # Weazlterm status and review evidence
 
-Updated 2026-10-11. **A PowerPC Tiger release candidate is built at
-`../release/weazlterm.app` (0.1.1, build 2). The user reports a successful interactive SSH
-session from the G4 to this development box, with working colors. The
-original hostname connection problem was identified by the user as DNS.**
+Updated 2026-10-12. **Version 0.2.0 is built at `../release/weazlterm.app`
+with bundled SFTP, independent terminal windows, and native Tiger tabs. Host
+regressions, SFTP local-pipe transfers, and PPC cross-build checks pass. The
+new controls and SFTP await G4 runtime testing.**
+
+The user confirmed a successful G4 interactive SSH session and colors with
+0.1.1; the original hostname problem was identified as DNS. That earlier
+hardware result is preserved below and is not a runtime claim for 0.2.0.
 
 ## Artifact and build evidence
 
 The bundle contains the native AppKit terminal, the supplied ICNS, OpenSSH
-portable 10.6p1 `ssh` and `ssh-keygen`, upstream license text, and fail-closed
-`scp`/`sftp` placeholders. `Info.plist` sets the minimum system version to
+portable 10.6p1 `ssh`, `ssh-keygen`, and `sftp-client`, an SFTP launcher,
+upstream license text, and a fail-closed `scp` placeholder. `Info.plist` sets the minimum system version to
 10.4. The app launches Bash from the system and routes ordinary `ssh` and
-`ssh-keygen` commands to the bundled helpers.
+`ssh-keygen` and `sftp` commands to the bundled helpers.
 
 Build host: x86-64 Linux. Target: 32-bit big-endian PowerPC, Mach-O, compiled
 for G3-compatible instructions and linked against the Mac OS X 10.4u SDK.
@@ -22,9 +26,9 @@ only Tiger `libSystem`. These checks establish cross-build structure and
 dependencies, not successful loading by Tiger's dynamic loader.
 
 The final bundle tree SHA-256 is
-`085353e72232014aeb78e92706c8db50d6ac504e9151b2c217419bee972539bb`.
+`45ca9e7f82287fba88a4ba34defeedab8bccc48bdfc431ad28f7bf0a5a9664c3`.
 The executable string scan found no build-machine paths. A deterministic
-file-by-file record is in `build/release-validation-ssh-path-fix.log`.
+file-by-file record is in `build/release-validation-0.2.0.log`.
 
 | Check | Result and retained evidence |
 | --- | --- |
@@ -51,8 +55,9 @@ running the bundled PPC client.
 The G4, Tiger runtime, and USB launch path were unavailable in this build
 environment. The PPC executables have not run here. The terminal is an early
 xterm-compatible subset: it has no scrollback or text selection/copy, and
-full-screen TUI compatibility has not been established. `scp` and `sftp` are
-not supported and intentionally fail closed. Paste and resize are present in
+full-screen TUI compatibility has not been established. `scp` is not
+supported and intentionally fails closed. SFTP is implemented in 0.2.0 and
+awaits a target-network transfer test. Paste and resize are present in
 the source but still need hardware interaction tests.
 
 ## Workbook gate tracking
@@ -133,3 +138,56 @@ are unchanged. The exact destination address, negotiated algorithms, client
 version output, authentication method, and USB launch location were not
 supplied. This result does not close the remaining full-screen TUI, Unicode,
 clipboard, lifecycle, performance, or original-host DNS/connection checks.
+
+
+## 0.2.0 SFTP, windows and tabs (2026-10-12)
+
+Requested scope: native SFTP plus Command-N and Command-T. Implemented,
+host-reviewed, and cross-built; awaiting physical G4 review.
+
+- `src/WeazlApp.{h,m}` owns terminal-window controllers and the application
+  menus. Command-N opens a local shell in a new window; Command-T adds one
+  to the active window (or creates a window when none is active).
+- `src/WeazlWindow.{h,m}` uses Tiger NSTabView. Every tab owns a WeazlView
+  and independent WTSession. Command-W closes a tab; Command-Shift-W closes
+  a window; Command-Shift-[ and ] switch tabs. The last closed window leaves
+  the application running for Command-N. Command-Q stops every owned session.
+- `src/WeazlView.{h,m}` records exit status per view and notifies its owning
+  window. An ended background tab updates its own label; it does not change
+  the active tab's window title. `src/main.m` retains initial `--ssh` behavior;
+  subsequent new tabs/windows always start local shells.
+- `scripts/build-ssh-ppc.sh` builds upstream SFTP alongside SSH. The bundled
+  `sftp` launcher resolves its own directory and executes `sftp-client -S`
+  with the adjacent `ssh`, preserving quoted arguments. Missing client or
+  transport fails closed. Explicit upstream `-S` overrides remain available.
+- Packaging, shell routing, native-build source lists, version metadata, and
+  user documentation were updated. The renamed checkout required repairing
+  one ignored local assembler symlink. The AppKit compile now explicitly
+  supplies the Tiger framework directory with `-iframework`, rather than
+  depending on the compiler's former checkout path.
+
+Validation on x86-64 Linux:
+
+| Command/check | Result | Evidence |
+| --- | --- | --- |
+| `make test sanitize` | Passed, including concurrent PTYs, output/resize isolation, and closing one while the other continues | `build/tests-0.2.0.log` |
+| `WEAZLTERM_TEST_BASH="$PWD/build/bash-compat/bash-2.05b/bash" sh tests/test_shell_resolution.sh` | Passed under Bash 2.05b; SFTP alias/function removal, spaced paths/arguments, direct command routing, missing helper/transport refusal | `build/bash-compat/0.2.0.log` |
+| `python3 tests/test_sftp_transfer.py build/ssh/sftp build/ssh/sftp-server` | Passed: 1 MiB binary put/get equality, spaced relocation, adjacent transport, failing batch command | `build/sftp-transfer-0.2.0.log` |
+| `sh scripts/build-ssh-ppc.sh` | SSH, keygen, and SFTP strict-linked for PPC; each imports only Tiger libSystem | `build/ssh-ppc-0.2.0.log` |
+| `sh scripts/build-app-ppc.sh` | AppKit build against Tiger SDK passed | `build/app-ppc-0.2.0.log` |
+| Artifact/ZIP inspection | Four native PPC Mach-O executables, correct permissions, no build-machine paths, matching icon/resources, ZIP byte/mode roundtrip | `build/release-validation-0.2.0.log` |
+
+The SFTP fixture uses a host-built OpenSSH client/server and a local pipe
+transport; it does not establish authentication or network transfers on PPC.
+The host versions were built with `make -C build/ssh -j4 sftp sftp-server`.
+No GUI runtime or keyboard-focus test was possible on this Linux host.
+
+The 0.2.0 ZIP is `release/weazlterm-0.2.0-tiger-ppc.zip` with SHA-256
+`e9ee0800f98e2b149363e689a610d3a002d525ad7e506e1a3b8164b98bcf93ab`.
+The 0.1.1 ZIP remains available. The new unpacked bundle replaces the current
+`release/weazlterm.app`; its complete previous copy was kept under ignored
+`build/weazlterm-0.1.1-before-tabs.app`.
+
+Next: run the G4 checks in workbook section 16. In particular verify tab
+focus, independent output/resize, background session exit, close/quit cleanup,
+and SFTP put/get with a verified server. No 0.2.0 G4 pass is claimed yet.

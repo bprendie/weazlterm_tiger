@@ -80,8 +80,10 @@ static void deliver(void *context, const void *bytes, size_t length)
         title = [NSString stringWithFormat:@"Weazlterm - session stopped by signal %d",
             WTERMSIG(session.status)];
     else title = @"Weazlterm - session ended";
-    [[self window] setTitle:title];
+    sessionTitle = [title copy];
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"WeazlSessionEnded" object:self];
 }
+- (NSString *)sessionTitle { return sessionTitle; }
 - (void)stopSession
 {
     if (sessionStarted && !sessionFinished) wt_session_stop(&session);
@@ -114,6 +116,7 @@ static void deliver(void *context, const void *bytes, size_t length)
     wt_destroy(&terminal);
     [font release];
     [boldFont release];
+    [sessionTitle release];
     [super dealloc];
 }
 @end

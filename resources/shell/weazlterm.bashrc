@@ -25,5 +25,9 @@ else
     ssh-keygen() { printf '%s\n' 'Weazlterm bundled ssh-keygen is missing.' >&2; return 126; }
 fi
 scp() { printf '%s\n' 'Weazlterm scp is not packaged in this build.' >&2; return 126; }
-sftp() { printf '%s\n' 'Weazlterm sftp is not packaged in this build.' >&2; return 126; }
+if [ -x "$_WEAZLTERM_HELPERS/sftp" ]; then
+    hash -p "$_WEAZLTERM_HELPERS/sftp" sftp
+else
+    sftp() { printf '%s\n' 'Weazlterm bundled SFTP is missing; refusing the system fallback.' >&2; return 126; }
+fi
 unset _WEAZLTERM_CONTENTS _WEAZLTERM_HELPERS

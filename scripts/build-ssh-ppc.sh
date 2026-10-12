@@ -48,7 +48,8 @@ LDFLAGS='-Wl,-undefined,error' LIBS='' \
 make -j "${JOBS:-4}" \
     AR="$toolchain/bin/powerpc-apple-darwin8-ar" \
     RANLIB="$toolchain/bin/powerpc-apple-darwin8-ranlib" \
-    ssh ssh-keygen
-file ssh ssh-keygen
+    ssh ssh-keygen sftp
+file ssh ssh-keygen sftp
 "$toolchain/bin/powerpc-apple-darwin8-otool" -L ssh
 "$toolchain/bin/powerpc-apple-darwin8-otool" -L ssh-keygen
+"$toolchain/bin/powerpc-apple-darwin8-otool" -L sftp

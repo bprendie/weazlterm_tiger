@@ -23,6 +23,17 @@ cp "$root/resources/helpers/scp" "$bundle/Contents/Helpers/scp"
 cp "$root/resources/helpers/sftp" "$bundle/Contents/Helpers/sftp"
 chmod +x "$bundle/Contents/Helpers/scp" "$bundle/Contents/Helpers/sftp"
 cp "$rc" "$bundle/Contents/Resources/shell/weazlterm.bashrc"
+cat > "$bundle/Contents/Helpers/sftp-client" <<'EOF'
+#!/bin/sh
+[ "$1" = -S ] || exit 90
+transport=$2
+shift 2
+[ "$1" = 'user@host:/a folder' ] || exit 91
+[ "$2" = 'local file' ] || exit 92
+"$transport" sftp-transport
+EOF
+chmod +x "$bundle/Contents/Helpers/sftp-client"
+
 cat > "$tmp/home/.bash_profile" <<'EOF'
 PATH=/usr/bin:/bin
 export PATH
@@ -34,6 +45,8 @@ PATH=/usr/bin:/bin
 export PATH
 ssh() { printf '%s\n' system-rc-function; }
 alias ssh=/usr/bin/ssh
+sftp() { printf '%s\n' system-sftp; }
+alias sftp=/usr/bin/sftp
 EOF
 output=$(HOME="$tmp/home" WEAZLTERM_RC="$bundle/Contents/Resources/shell/weazlterm.bashrc" \
     "$shell" --noprofile --norc -c \
@@ -71,7 +84,28 @@ case "$output" in
 esac
 printf '%s\n' 'shell: command scp fails closed instead of reaching system scp'
 
+output=$(HOME="$tmp/home" WEAZLTERM_RC="$bundle/Contents/Resources/shell/weazlterm.bashrc" \
+    "$shell" --noprofile --rcfile "$bundle/Contents/Resources/shell/weazlterm.bashrc" \
+    -i -c 'sftp "user@host:/a folder" "local file"; command sftp "user@host:/a folder" "local file"' 2>/dev/null)
+expected=$(printf 'bundled:sftp-transport\nbundled:sftp-transport')
+[ "$output" = "$expected" ] || { printf 'SFTP routing failed: %s\n' "$output" >&2; exit 1; }
+printf '%s\n' 'shell: SFTP uses bundled transport and preserves spaced arguments'
+
+mv "$bundle/Contents/Helpers/sftp-client" "$tmp/sftp-client.saved"
+if "$bundle/Contents/Helpers/sftp" host > "$tmp/missing-sftp.log" 2>&1; then
+    echo 'SFTP unexpectedly succeeded with missing client' >&2; exit 1
+else
+    [ "$?" = 126 ] || exit 1
+fi
+mv "$tmp/sftp-client.saved" "$bundle/Contents/Helpers/sftp-client"
 rm "$bundle/Contents/Helpers/ssh"
+if "$bundle/Contents/Helpers/sftp" host > "$tmp/missing-transport.log" 2>&1; then
+    echo 'SFTP unexpectedly succeeded with missing SSH' >&2; exit 1
+else
+    [ "$?" = 126 ] || exit 1
+fi
+printf '%s\n' 'shell: SFTP fails closed for missing client and missing SSH'
+
 output=$(HOME="$tmp/home" WEAZLTERM_RC="$bundle/Contents/Resources/shell/weazlterm.bashrc" \
     "$shell" --noprofile --norc -c \
     '. "$HOME/.bash_profile"; . "$WEAZLTERM_RC"; ssh host' 2>&1 || :)

@@ -16,7 +16,7 @@ stage="$root/build/release-stage-$$/weazlterm.app"
 objects="$root/build/ppc-app-objects"
 
 for path in "$cc" "$cc1obj" "$as" "$root/build/ssh-ppc/ssh" \
-    "$root/build/ssh-ppc/ssh-keygen" "$sdk/System/Library/Frameworks/Cocoa.framework/Headers/Cocoa.h"; do
+    "$root/build/ssh-ppc/ssh-keygen" "$root/build/ssh-ppc/sftp" "$sdk/System/Library/Frameworks/Cocoa.framework/Headers/Cocoa.h"; do
     if [ ! -e "$path" ]; then
         echo "Required Tiger PPC build input is missing: $path" >&2
         exit 1
@@ -44,7 +44,7 @@ compile_objc() {
     final="$objects/$name.s"
     "$cc1obj" -quiet -fnext-runtime -fobjc-abi-version=0 \
         -fconstant-string-class=NSConstantString -fexceptions -fPIC \
-        -mcpu=G3 -O2 -Isrc -isystem "$gccinc" \
+        -mcpu=G3 -O2 -Isrc -iframework "$sdk/System/Library/Frameworks" -isystem "$gccinc" \
         -isystem "$toolchain/include" -isystem "$sdk/usr/include" \
         "$root/src/$source" -o "$raw"
     python3 "$fixexc" "$raw" "$fixed"
@@ -52,7 +52,7 @@ compile_objc() {
     "$as" -arch ppc -force_cpusubtype_ALL -o "$objects/$name.o" "$final"
 }
 
-for source in main.m WeazlView.m WeazlDrawing.m WeazlInput.m; do
+for source in main.m WeazlApp.m WeazlWindow.m WeazlView.m WeazlDrawing.m WeazlInput.m; do
     compile_objc "$source"
 done
 
@@ -68,16 +68,20 @@ cp "$root/resources/WeazlTerm.icns" "$stage/Contents/Resources/WeazlTerm.icns"
 cp "$root/resources/shell/weazlterm.bashrc" "$stage/Contents/Resources/shell/weazlterm.bashrc"
 cp "$root/build/ssh-ppc/ssh" "$stage/Contents/Helpers/ssh"
 cp "$root/build/ssh-ppc/ssh-keygen" "$stage/Contents/Helpers/ssh-keygen"
+cp "$root/build/ssh-ppc/sftp" "$stage/Contents/Helpers/sftp-client"
 cp "$root/resources/helpers/scp" "$stage/Contents/Helpers/scp"
 cp "$root/resources/helpers/sftp" "$stage/Contents/Helpers/sftp"
 chmod 755 "$stage/Contents/MacOS/weazlterm" \
     "$stage/Contents/Helpers/ssh" "$stage/Contents/Helpers/ssh-keygen" \
-    "$stage/Contents/Helpers/scp" "$stage/Contents/Helpers/sftp"
+    "$stage/Contents/Helpers/scp" "$stage/Contents/Helpers/sftp" \
+    "$stage/Contents/Helpers/sftp-client"
 
 "$otool" -hv "$stage/Contents/MacOS/weazlterm"
 "$otool" -L "$stage/Contents/MacOS/weazlterm"
 "$otool" -L "$stage/Contents/Helpers/ssh"
 "$otool" -L "$stage/Contents/Helpers/ssh-keygen"
+
+"$otool" -L "$stage/Contents/Helpers/sftp-client"
 
 mkdir -p "$root/release"
 mv "$stage" "$root/release/weazlterm.app"

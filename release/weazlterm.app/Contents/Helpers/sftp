@@ -1,3 +1,8 @@
 #!/bin/sh
-echo 'Weazlterm 0.1.0 does not include sftp.' >&2
-exit 126
+# Keep OpenSSH's transport inside the relocated app, including paths with spaces.
+helpers=$(CDPATH= cd -P "$(dirname "$0")" && pwd) || exit 126
+if [ ! -x "$helpers/ssh" ] || [ ! -x "$helpers/sftp-client" ]; then
+    printf '%s\n' 'Weazlterm bundled SFTP or SSH is missing; refusing the system fallback.' >&2
+    exit 126
+fi
+exec "$helpers/sftp-client" -S "$helpers/ssh" "$@"
