@@ -147,3 +147,7 @@ The PowerPC build uses a prepared Linux cross-toolchain, the Mac OS X 10.4u SDK,
 Build and hardware gates are in the [execution workbook](WORKBOOK.md). The binary retains its [OpenSSH license notices](release/weazlterm.app/Contents/Resources/licenses/OpenSSH-LICENCE.txt).
 
 Weazl knows. Weazl is wise. Weazl will never tax the gig.
+
+## WEAZL and WE4ZL branding
+
+Forking or reusing code does not grant permission to brand or market your own product with the WEAZL™ or WE4ZL™ wordmarks or the weazl head logo. See the [trademark and artwork notice](TRADEMARKS.md).
